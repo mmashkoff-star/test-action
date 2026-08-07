@@ -1,4 +1,4 @@
-from datetime import datetime, timezone
+from datetime import date, datetime, timedelta, timezone
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 from fastapi import FastAPI, HTTPException, Query
@@ -31,6 +31,54 @@ def get_server_date():
         "day": today.day,
         "weekday": today.strftime("%A"),
         "timezone": "UTC",
+    }
+
+
+@app.get("/week")
+def get_week_info(
+    date_value: str | None = Query(
+        default=None,
+        alias="date",
+        description="Дата в формате YYYY-MM-DD. Если не указана — сегодня (по tz).",
+        examples=["2026-08-07"],
+    ),
+    tz: str = Query(
+        default="UTC",
+        description="Часовой пояс (IANA) для определения «сегодня», если date не передан",
+    ),
+):
+    try:
+        zone = ZoneInfo(tz)
+    except ZoneInfoNotFoundError as exc:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Unknown timezone: {exc}",
+        ) from exc
+
+    if date_value is None:
+        target_date = datetime.now(timezone.utc).astimezone(zone).date()
+    else:
+        try:
+            target_date = date.fromisoformat(date_value)
+        except ValueError as exc:
+            raise HTTPException(
+                status_code=400,
+                detail="Invalid date format. Use YYYY-MM-DD, e.g. 2026-08-07",
+            ) from exc
+
+    iso_year, week_number, weekday_number = target_date.isocalendar()
+    week_start = target_date - timedelta(days=target_date.weekday())
+    week_end = week_start + timedelta(days=6)
+
+    return {
+        "date": target_date.isoformat(),
+        "timezone": tz,
+        "iso_year": iso_year,
+        "week_number": week_number,
+        "weekday": target_date.strftime("%A"),
+        "weekday_number": weekday_number,
+        "week_start": week_start.isoformat(),
+        "week_end": week_end.isoformat(),
     }
 
 
