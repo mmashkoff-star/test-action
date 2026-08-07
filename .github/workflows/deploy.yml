@@ -49,7 +49,7 @@ jobs:
             ${{ steps.meta.outputs.image }}:${{ steps.meta.outputs.tag }}
             ${{ steps.meta.outputs.image }}:latest
 
-deploy:
+  deploy:
     name: Deploy via SSH
     runs-on: ubuntu-latest
     needs: build-and-push
